@@ -1,0 +1,7 @@
+{
+  "merchant": "Total",
+  "transaction_date": null,
+  "total": 12.42,
+  "total_formatted": "12.42",
+  "__error": "Could not reliably extract: transaction_date"
+}

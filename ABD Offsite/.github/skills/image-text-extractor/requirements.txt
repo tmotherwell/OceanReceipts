@@ -1,0 +1,4 @@
+pillow
+google-cloud-vision
+python-dateutil
+PyMuPDF

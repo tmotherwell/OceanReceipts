@@ -1,0 +1,7 @@
+{
+  "merchant": "Click On My Cards",
+  "transaction_date": null,
+  "total": 50.0,
+  "total_formatted": "50.00",
+  "__error": "Could not reliably extract: transaction_date"
+}
