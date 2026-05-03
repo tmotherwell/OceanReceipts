@@ -1,7 +1,6 @@
 {
-  "merchant": "Total",
-  "transaction_date": null,
+  "merchant": "Firehouse Subs",
+  "transaction_date": "2026-04-27",
   "total": 12.42,
-  "total_formatted": "12.42",
-  "__error": "Could not reliably extract: transaction_date"
+  "total_formatted": "12.42"
 }

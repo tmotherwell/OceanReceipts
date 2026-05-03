@@ -100,16 +100,13 @@ def ocr_image_bytes(content: bytes) -> Tuple[str, dict]:
     return text, {}
 
 
-def clean_pdf_text(text: str) -> str:
-    """Remove common email header blocks and noisy lines from extracted PDF text.
-
-    Heuristics:
-    - If the top N lines contain email-like headers (From:, To:, Subject:, email addresses, "Forwarded message"),
-      skip the initial header block up to the first blank line or until a content-looking line.
-    - Remove remaining lines that contain email addresses or common footer signatures.
+def clean_pdf_text(text: str) -> Tuple[str, str]:
+    """
+    Returns a tuple of (cleaned_body, header_text).
     """
     if not text:
-        return text
+        return "", ""
+    
     lines = text.splitlines()
     email_addr_pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b')
     header_colon_pattern = re.compile(r'^\s*(From|Sent|To|Subject|Date|Cc|Bcc|Reply-To|Attachments)\s*:', re.I)
@@ -117,77 +114,45 @@ def clean_pdf_text(text: str) -> str:
 
     N = min(20, len(lines))
     header_like_count = 0
+    end = 0
+    
     for i in range(N):
         s = lines[i].strip()
-        if not s:
-            continue
+        if not s: continue
         if header_colon_pattern.match(s) or email_addr_pattern.search(s) or forwarded_pattern.search(s):
             header_like_count += 1
-    if header_like_count >= 1:
-        # skip from start until first blank line after header-like area, or until a likely content line
-        end = 0
-        for i in range(len(lines)):
-            if i < N and (header_colon_pattern.match(lines[i].strip()) or email_addr_pattern.search(lines[i]) or forwarded_pattern.search(lines[i])):
-                continue
-            if i < N and not lines[i].strip():
-                end = i + 1
-                break
-            if i >= N:
-                if lines[i].strip() and not email_addr_pattern.search(lines[i]):
-                    end = i
-                    break
-        if end == 0:
-            end = N
-        cleaned = lines[end:]
-    else:
-        cleaned = lines
+            end = i + 1 # Keep track of the end of the header block
 
-    cleaned2 = []
+    header_text = "\n".join(lines[:end])
+    body_lines = lines[end:]
+
+    # Further clean the body as in the original script
+    cleaned_body_lines = []
     footer_patterns = re.compile(r'^(Sent from my|If you have questions|To view this message|This message was sent)', re.I)
-    for line in cleaned:
+    for line in body_lines:
         s = line.strip()
-        if not s:
-            cleaned2.append(line)
-            continue
-        if email_addr_pattern.search(s):
-            continue
-        if footer_patterns.match(s):
-            continue
-        cleaned2.append(line)
-    # Remove leading blank lines
-    while cleaned2 and not cleaned2[0].strip():
-        cleaned2.pop(0)
-    return '\n'.join(cleaned2)
+        if not s or not (email_addr_pattern.search(s) or footer_patterns.match(s)):
+            cleaned_body_lines.append(line)
+            
+    return "\n".join(cleaned_body_lines).strip(), header_text.strip()
 
 
-def process_pdf(path: Path) -> Tuple[str, dict]:
-    """Extract text from a PDF file. For each page, try text extraction; if empty, render and OCR the page."""
+def process_pdf(path: Path) -> Tuple[str, str]:
+    """Extract text from PDF. Returns (cleaned_text, header_text)."""
     if fitz is None:
-        raise RuntimeError("PyMuPDF (fitz) is required to process PDFs. Install with `pip install PyMuPDF`.")
+        raise RuntimeError("PyMuPDF (fitz) is required.")
     doc = fitz.open(str(path))
     full_text = []
     for page in doc:
-        try:
-            # try to extract embedded text first
-            page_text = page.get_text("text")
-        except Exception:
-            page_text = ""
-        if page_text and len(re.sub(r"\s+", "", page_text)) > 20:
-            full_text.append(page_text)
-        else:
-            # render page and OCR
-            try:
-                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                img_bytes = pix.tobytes("png")
-                page_text, _ = ocr_image_bytes(img_bytes)
-                full_text.append(page_text)
-            except Exception as e:
-                # fallback: append any raw text (even if empty)
-                full_text.append(page_text or "")
+        page_text = page.get_text("text")
+        if not (page_text and len(re.sub(r"\s+", "", page_text)) > 20):
+            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            page_text, _ = ocr_image_bytes(pix.tobytes("png"))
+        full_text.append(page_text)
+    
     raw = "\n".join(full_text)
-    # clean common email headers/noise before returning
-    cleaned = clean_pdf_text(raw)
-    return cleaned, {}
+    cleaned, header = clean_pdf_text(raw)
+    return cleaned, header
 
 
 def ocr_image(path: Path) -> Tuple[str, dict]:
@@ -382,9 +347,13 @@ def find_amounts_near_phrases(text: str, phrases: List[str] = None, line_window:
 
 
 def parse_date(text: str) -> Optional[str]:
-    # use robust date patterns then dateutil
+    # Expanded month and weekday regex
     months = r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)'
+    weekdays = r'(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)'
+    
     patterns = [
+        # New pattern for: Tue, Jan 6, 2026
+        rf'{weekdays},\s+{months}\s+\d{{1,2}},\s+\d{{4}}', 
         r'\d{4}-\d{2}-\d{2}',
         r'\d{1,2}/\d{1,2}/\d{2,4}',
         r'\d{1,2}-\d{1,2}-\d{2,4}',
@@ -392,10 +361,13 @@ def parse_date(text: str) -> Optional[str]:
         rf'\d{{1,2}}\s+{months}\s+\d{{2,4}}',
         rf'{months}\s+\d{{1,2}},?\s*\d{{2,4}}',
     ]
+    
     for p in patterns:
-        for m in re.findall(p, text):
+        matches = re.findall(p, text, re.I)
+        for m in matches:
             if date_parse:
                 try:
+                    # dateutil handles the weekday component automatically
                     dt = date_parse(m, fuzzy=True, dayfirst=False)
                     return dt.date().isoformat()
                 except Exception:
@@ -472,21 +444,48 @@ def parse_total(text: str) -> Optional[float]:
 
 def process_file(image_path: Path, output_dir: Path) -> Path:
     result = {"merchant": None, "transaction_date": None, "total": None}
+    header_text = ""
+    is_pdf = image_path.suffix.lower() == ".pdf"
 
     try:
-        if image_path.suffix.lower() == ".pdf":
-            text, data = process_pdf(image_path)
+        if is_pdf:
+            text, header_text = process_pdf(image_path)
         else:
-            text, data = ocr_image(image_path)
+            text, _ = ocr_image(image_path)
     except Exception as e:
         result["__error"] = f"OCR failed: {e}"
-        out_path = output_dir / f"{image_path.stem}_ocr.json"
-        out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
-        return out_path
+        # ... existing error handling ...
+        return output_dir / f"{image_path.stem}_ocr.json"
 
+    # 1. Primary Extraction from cleaned text
     lines = [l for l in text.splitlines() if l.strip()]
     result["merchant"] = parse_merchant(lines)
     result["transaction_date"] = parse_date(text)
+    
+# 2. TARGETED FALLBACK FOR EMAIL HEADERS[cite: 1]
+    # If PDF and date is missing, or it's clearly an email layout
+    if image_path.suffix.lower() == ".pdf" and (not result["transaction_date"] or header_text):
+        
+        # Priority 1: Look for the specific "Tue, Jan 6, 2026" format in the header[cite: 1]
+        header_date = parse_date(header_text)
+        if header_date:
+            result["transaction_date"] = header_date
+            
+        # Priority 2: If date is still missing, look for common email Date lines[cite: 1]
+        if not result["transaction_date"]:
+            date_line_match = re.search(r'Date:\s*(.*)', header_text, re.I)
+            if date_line_match:
+                result["transaction_date"] = parse_date(date_line_match.group(1))
+        
+        # Optionally: If merchant is still missing, try looking in header
+        if not result["merchant"] and header_text:
+            # Simple fallback: look for common 'From: Merchant Name' pattern
+            from_match = re.search(r'From:\s*(.*)', header_text, re.I)
+            if from_match:
+                result["merchant"] = normalize_merchant(from_match.group(1))
+    
+    
+    # result["transaction_date"] = parse_date(text)
     raw_total = parse_total(text)
     if raw_total is not None:
         # numeric total rounded to two decimals
