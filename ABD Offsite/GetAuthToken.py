@@ -3,11 +3,11 @@ import os
 
 def run():
     # 1. Read credentials securely
-    if not os.path.exists('C:\\Users\\tmotherwell\\Documents\\secrets.txt'):
+    if not os.path.exists('secrets.txt'):
         print("Error: secrets.txt missing.")
         return
 
-    with open('C:\\Users\\tmotherwell\\Documents\\secrets.txt', 'r') as f:
+    with open('secrets.txt', 'r') as f:
         credentials = [line.strip() for line in f.readlines() if line.strip()]
         if len(credentials) < 2:
             print("Error: secrets.txt must have username on line 1 and password on line 2.")
@@ -30,9 +30,11 @@ def run():
             if auth_header:
                 # Often tokens are 'Bearer <token>', so we strip 'Bearer ' if present
                 clean_token = auth_header.replace("Bearer ", "").replace("bearer ", "").strip()
+                if "client" in clean_token.lower():
+                        return
                 if clean_token not in tokens_found:
                     tokens_found.add(clean_token)
-                    print(f"✨ Found Token in {type(container).__name__} Headers: {clean_token[:30]}...")
+                    print(f"Found Token in {type(container).__name__} Headers: {clean_token}")
 
         # Attach listeners to both requests and responses
         page.on("request", lambda request: check_headers(request))
@@ -43,24 +45,37 @@ def run():
         page.goto("https://my.waveapps.com/login/")
 
         # Selectors may need adjustment based on your target site
-        page.fill('input[name="id_username"]', username)
-        page.fill('input[name="password-input"]', password)
+        page.fill('input[name="username"]', username)
+        page.fill('input[name="password"]', password)
         
         # Click and wait for the app to actually use the token
-        page.click('button#sign-in-button js-track-segment-click')
+        page.click('#js-sign-in-form button[type="submit"]')
         
         # We wait for 'networkidle' because the token usually appears 
         # in the XHR requests that happen immediately after login.
-        page.wait_for_load_state("networkidle")
-        page.wait_for_timeout(2000) # Short buffer for any delayed async calls
+        page.wait_for_url(lambda url: "/dashboard" in url, timeout=15000)
 
         # 4. Summary
         if tokens_found:
-            print(f"\nCaptured {len(tokens_found)} unique token(s).")
+            print(f"\nSuccess! Captured {len(tokens_found)} unique authorization token(s).")
+            # Loop through the set and print every single captured token
+            try:
+                with open('token.txt', 'w', encoding='utf-8') as token_file:
+                    for index, token in enumerate(tokens_found, start=1):
+                        token_file.write(f"{token}")
+                print("All captured tokens have been saved to 'token.txt'.")
+            except Exception as e:
+                print(f"Error writing to token.txt: {e}")
         else:
-            print("\nNo 'Authorization' headers detected.")
+            print("\nNo 'Authorization' headers detected. Check if your credentials are correct.")
 
         browser.close()
+
+        # print("Script execution paused.")
+        # print("The browser will remain open so you can inspect it.")
+        # print("Press ENTER in this terminal window to close the browser and finish.")
+        # print("="*40)
+        # input()
 
 if __name__ == "__main__":
     run()
