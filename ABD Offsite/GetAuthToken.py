@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os
+import requests
 
 def run():
     # 1. Read credentials securely
@@ -68,14 +69,16 @@ def run():
                 print(f"Error writing to token.txt: {e}")
         else:
             print("\nNo 'Authorization' headers detected. Check if your credentials are correct.")
+            exit
 
-        browser.close()
 
-        # print("Script execution paused.")
-        # print("The browser will remain open so you can inspect it.")
-        # print("Press ENTER in this terminal window to close the browser and finish.")
-        # print("="*40)
-        # input()
+        # browser.close()
+
+        print("Script execution paused.")
+        print("The browser will remain open so you can inspect it.")
+        print("Press ENTER in this terminal window to close the browser and finish.")
+        print("="*40)
+        input()
 
 if __name__ == "__main__":
     run()
