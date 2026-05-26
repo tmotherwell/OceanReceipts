@@ -526,6 +526,7 @@ def main():
         logging.info(f"Processing {img.name}")
         out = process_file(img, output_dir)
         logging.info(f"Wrote {out}")
+        
 
 
 if __name__ == "__main__":

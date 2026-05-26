@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Gmail Multi-PDF Exporter",
+  "version": "1.2",
+  "description": "Select multiple Gmail threads and export them to PDF.",
+  "permissions": ["activeTab"],
+  "host_permissions": ["*://mail.google.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://mail.google.com/*"],
+      "js": ["html2pdf.bundle.min.js", "content.js"]
+    }
+  ]
+}
