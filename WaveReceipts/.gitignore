@@ -3,5 +3,6 @@
 .github/skills/wave-enter-expense/secrets/
 .github/skills/wave-enter-expense/secrets/*
 secrets.txt
+token.txt
 
 # Add other local ignores below
