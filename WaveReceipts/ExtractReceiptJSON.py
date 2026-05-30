@@ -185,6 +185,15 @@ def load_merchants(root: Path) -> List[str]:
     return []
 
 
+def sanitize_filename_component(value: str, default: str) -> str:
+    if not value:
+        return default
+    value = value.strip()
+    value = re.sub(r'[^A-Za-z0-9 _-]', '_', value)
+    value = re.sub(r'[\s_]+', '_', value).strip('_')
+    return value or default
+
+
 def find_known_merchant_from_lines(lines: List[str]) -> Optional[str]:
     if not MERCHANTS:
         return None
@@ -464,7 +473,7 @@ def parse_total(text: str) -> Optional[float]:
     return None
 
 
-def process_file(image_path: Path, output_dir: Path) -> Path:
+def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
     result = {"merchant": None, "transaction_date": None, "total": None}
     header_text = ""
     is_pdf = image_path.suffix.lower() == ".pdf"
@@ -476,12 +485,24 @@ def process_file(image_path: Path, output_dir: Path) -> Path:
             text, _ = ocr_image(image_path)
     except Exception as e:
         result["__error"] = f"OCR failed: {e}"
-        # ... existing error handling ...
-        return output_dir / f"{image_path.stem}_ocr.json"
+        out_path = output_dir / f"{image_path.stem}_ocr.json"
+        out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
+
+        date_part = sanitize_filename_component(result.get("transaction_date"), "dateUnknown")
+        merchant_part = sanitize_filename_component(result.get("merchant"), "merchantUnknown")
+        new_stem = f"{date_part}_{merchant_part}"
+
+        new_out_path = out_path.with_name(f"{new_stem}{out_path.suffix}")
+        new_input_path = image_path.with_name(f"{new_stem}{image_path.suffix}")
+
+        if new_out_path != out_path:
+            out_path = out_path.rename(new_out_path)
+        if new_input_path != image_path:
+            image_path = image_path.rename(new_input_path)
+
+        return out_path, image_path
 
     # 1. Primary Extraction from cleaned text
-    # OCRTextPath = output_dir / f"{image_path.stem}_raw.txt"
-    # OCRTextPath.write_text(text, encoding="utf-8")
     lines = [l for l in text.splitlines() if l.strip()]
     result["merchant"] = parse_merchant(lines)
     result["transaction_date"] = parse_date(text)
@@ -532,7 +553,20 @@ def process_file(image_path: Path, output_dir: Path) -> Path:
 
     out_path = output_dir / f"{image_path.stem}_ocr.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
-    return out_path
+
+    date_part = sanitize_filename_component(result.get("transaction_date"), "dateUnknown")
+    merchant_part = sanitize_filename_component(result.get("merchant"), "merchantUnknown")
+    new_stem = f"{date_part}_{merchant_part}"
+
+    new_out_path = out_path.with_name(f"{new_stem}{out_path.suffix}")
+    new_input_path = image_path.with_name(f"{new_stem}{image_path.suffix}")
+
+    if new_out_path != out_path:
+        out_path = out_path.rename(new_out_path)
+    if new_input_path != image_path:
+        image_path = image_path.rename(new_input_path)
+
+    return out_path, image_path
 
 
 def main():
@@ -546,10 +580,14 @@ def main():
     if not imgs:
         logging.info("No images found in input/ — put receipt images there and re-run.")
         return
+    output_mapping = {}
     for img in imgs:
         logging.info(f"Processing {img.name}")
-        out = process_file(img, output_dir)
-        logging.info(f"Wrote {out}")
+        out_path, renamed_input_path = process_file(img, output_dir)
+        output_mapping[str(out_path)] = str(renamed_input_path)
+        logging.info(f"Wrote {out_path}")
+
+    return output_mapping
         
 
 
