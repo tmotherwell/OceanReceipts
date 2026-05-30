@@ -566,7 +566,7 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
     if new_input_path != image_path:
         image_path = image_path.rename(new_input_path)
 
-    logging.info(f"Extracted merchant: {result['merchant']}, date: {result['transaction_date']}, total: {result['total']}")
+    logging.info(f"Extracted merchant: {result['merchant']}, date: {result['transaction_date']}, total: {result['total_formatted']}")
     return out_path, image_path
 
 
@@ -583,7 +583,7 @@ def main():
         return
     output_mapping = {}
     for img in imgs:
-        logging.info(f"Processing {img.name}")
+        # logging.info(f"Processing {img.name}")
         out_path, renamed_input_path = process_file(img, output_dir)
         output_mapping[str(out_path)] = str(renamed_input_path)
     
