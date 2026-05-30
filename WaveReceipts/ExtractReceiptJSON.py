@@ -185,14 +185,36 @@ def load_merchants(root: Path) -> List[str]:
     return []
 
 
+def find_known_merchant_from_lines(lines: List[str]) -> Optional[str]:
+    if not MERCHANTS:
+        return None
+    cleaned_lines = [re.sub(r'[^a-z0-9 ]', ' ', line.lower()) for line in lines]
+    for km in MERCHANTS:
+        km_clean = re.sub(r'[^a-z0-9 ]', ' ', km.lower()).strip()
+        if not km_clean:
+            continue
+        for line in cleaned_lines:
+            if km_clean in line:
+                return km
+    return None
+
+
 # load known merchants (optional helper list to improve normalization)
 MERCHANTS = load_merchants(Path(__file__).resolve().parent)
 
 
 def parse_merchant(lines: List[str]) -> Optional[str]:
     # Consider single lines and merged top-line spans (1-3 lines) as candidates.
-    ignore_tokens = re.compile(r'\b(receipt|subtotal|tax|invoice|change|order|qty|unit|price|visa|mastercard|card)\b', re.I)
+    ignore_tokens = re.compile(
+        r'\b(receipt|subtotal|tax|invoice|change|order|qty|unit|price|visa|mastercard|card|total|balance|amount|due|paid|payment|payments|fee|fees|surcharge|surcharges|trip|fare|insurance|support|privacy|terms|download|contact)\b',
+        re.I,
+    )
     merchant_keyword = re.compile(r'\b(restaurant|cafe|shop|store|market|bakery|bar|hotel|inn|bank|atm|scotiabank|aramark)\b', re.I)
+    if MERCHANTS:
+        known = find_known_merchant_from_lines(lines)
+        if known:
+            return known
+
     candidates = []
     max_lines = min(6, len(lines))
     for i in range(max_lines):
@@ -458,6 +480,8 @@ def process_file(image_path: Path, output_dir: Path) -> Path:
         return output_dir / f"{image_path.stem}_ocr.json"
 
     # 1. Primary Extraction from cleaned text
+    # OCRTextPath = output_dir / f"{image_path.stem}_raw.txt"
+    # OCRTextPath.write_text(text, encoding="utf-8")
     lines = [l for l in text.splitlines() if l.strip()]
     result["merchant"] = parse_merchant(lines)
     result["transaction_date"] = parse_date(text)
