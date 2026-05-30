@@ -566,6 +566,7 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
     if new_input_path != image_path:
         image_path = image_path.rename(new_input_path)
 
+    logging.info(f"Extracted merchant: {result['merchant']}, date: {result['transaction_date']}, total: {result['total']}")
     return out_path, image_path
 
 
@@ -585,11 +586,16 @@ def main():
         logging.info(f"Processing {img.name}")
         out_path, renamed_input_path = process_file(img, output_dir)
         output_mapping[str(out_path)] = str(renamed_input_path)
-        logging.info(f"Wrote {out_path}")
-
-    return output_mapping
-        
-
+    
+    while True:
+        continueDecision = input("Continue to receipt entry? (y/n)")
+        if continueDecision == "y":
+            return output_mapping
+        elif continueDecision == "n":
+            print("Exiting")
+            return
+        else:
+            print("Invalid input")
 
 if __name__ == "__main__":
     main()
