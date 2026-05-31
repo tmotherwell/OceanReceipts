@@ -14,6 +14,7 @@ import logging
 import difflib
 from pathlib import Path
 from typing import Optional, List, Tuple
+import sys
 
 try:
     from google.cloud import vision
@@ -593,7 +594,7 @@ def main():
             return output_mapping
         elif continueDecision == "n":
             print("Exiting")
-            return
+            sys.exit(0)
         else:
             print("Invalid input")
 
