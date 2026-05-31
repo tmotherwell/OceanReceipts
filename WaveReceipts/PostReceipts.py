@@ -5,12 +5,12 @@ import requests
 import json
 import time
 import config
+import random
 
 # GraphQL internal APIs use the base64-style business ID.
-DEFAULT_BUSINESS_ID = "QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
-BUSINESS_ID = os.getenv("WAVE_BUSINESS_ID", DEFAULT_BUSINESS_ID)
+BUSINESS_ID = config.businessID
 ATTACHMENT_BUSINESS_UUID = os.getenv("WAVE_ATTACHMENT_BUSINESS_UUID")
-HAR_OUTPUT_PATH = os.getenv("WAVE_HAR_PATH", "wave_requests.har")
+HAR_OUTPUT_PATH = config.harOutputFilename
 
 # Some workflows also need the plain UUID business ID for REST endpoints.
 def get_business_uuid(base64_business_id):
@@ -21,11 +21,6 @@ def get_business_uuid(base64_business_id):
     except Exception:
         pass
     return base64_business_id
-
-def get_attachment_business_uuid():
-    if ATTACHMENT_BUSINESS_UUID:
-        return ATTACHMENT_BUSINESS_UUID
-    return get_business_uuid(BUSINESS_ID)
 
 def encode_business_id(business_uuid):
     try:
@@ -54,14 +49,14 @@ def build_graphql_attachment_id(attachment_id_or_uuid, attachment_business_uuid=
 
 def getBrowserToken(page):
     # 1. Read credentials securely
-    if not os.path.exists('secrets.txt'):
-        print("Error: secrets.txt missing.")
+    if not os.path.exists(config.credentialsFilename):
+        print("Error: credentials file missing.")
         return
 
-    with open('secrets.txt', 'r') as f:
+    with open(config.credentialsFilename, 'r') as f:
         credentials = [line.strip() for line in f.readlines() if line.strip()]
         if len(credentials) < 2:
-            print("Error: secrets.txt must have username on line 1 and password on line 2.")
+            print("Error: credentials file must have username on line 1 and password on line 2.")
             return
         username, password = credentials[0], credentials[1]
 
@@ -84,22 +79,15 @@ def getBrowserToken(page):
     page.on("response", lambda response: check_headers(response))
 
     print("Starting login sequence...")
-    page.goto("https://my.waveapps.com/login/")
+    page.goto(config.loginURL)
 
     page.fill('input[name="username"]', username)
     page.fill('input[name="password"]', password)
     page.click('#js-sign-in-form button[type="submit"]')
-    page.wait_for_url(lambda url: "/dashboard" in url, timeout=30000)
+    page.wait_for_url(lambda url: "/dashboard" in url, timeout=config.loginTimeout)
 
     if tokens_found:
         print(f"\nSuccess! Captured {len(tokens_found)} unique authorization token(s).")
-        try:
-            with open('token.txt', 'w', encoding='utf-8') as token_file:
-                for token in tokens_found:
-                    token_file.write(f"{token}\n")
-            print("All captured tokens have been saved to 'token.txt'.")
-        except Exception as e:
-            print(f"Error writing to token.txt: {e}")
         return next(iter(tokens_found))
     else:
         print("\nNo 'Authorization' headers detected. Check if your credentials are correct.")
@@ -217,7 +205,7 @@ def postTransaction(auth_token, receipt_json_path):
             "anchorLineItem": {
                 "category": {
                     "type": "ACCOUNT_ID",
-                    "accountId": "QWNjb3VudDo1OTg3OTgyMzc1MDMxMTkxMDI7QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
+                    "accountId": config.shareholderLoanAccountID
                 },
                 "amount": amount,
                 "itemType": "CREDIT"
@@ -226,7 +214,7 @@ def postTransaction(auth_token, receipt_json_path):
                 {
                     "category": {
                         "type": "ACCOUNT_ID",
-                        "accountId": "QWNjb3VudDo1OTg3OTgyMzgzMTY4MTQxMTI7QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
+                        "accountId": config.uncategorizedExpenseAcccountID
                     },
                     "amount": amount,
                     "itemType": "DEBIT",
@@ -357,7 +345,7 @@ def get_uploaded_attachment(request_context, auth_token, attachment_business_uui
     return None
 
 
-def wait_for_uploaded_attachment(request_context, auth_token, attachment_business_uuid, attachment_uuid, max_attempts=10, interval_seconds=4):
+def wait_for_uploaded_attachment(request_context, auth_token, attachment_business_uuid, attachment_uuid, max_attempts=config.maxRetries, interval_seconds=4):
     for attempt in range(1, max_attempts + 1):
         print(f"Checking attachment readiness ({attempt}/{max_attempts}) for {attachment_uuid}...")
         attachment_data = get_uploaded_attachment(request_context, auth_token, attachment_business_uuid, attachment_uuid)
@@ -435,7 +423,7 @@ def linkReceiptToTransaction(request_context, business_id, auth_token, transacti
     print(f"Transaction ID: {transaction_id}")
     print(f"Attachment ID: {attachment_id}")
 
-    max_attempts = 10
+    max_attempts = config.maxRetries
     for attempt in range(1, max_attempts + 1):
         print(f"Attempt {attempt}/{max_attempts} to link receipt...")
         response = request_context.post(url, headers=headers, data=json.dumps(payload))
@@ -489,11 +477,9 @@ def main(receiptPaths):
             print("No auth token available. Aborting post.")
             return
 
-        business_uuid = get_attachment_business_uuid()
+        business_uuid = get_business_uuid(BUSINESS_ID)
         print(f"Using GraphQL business ID: {BUSINESS_ID}")
         print(f"Using attachment business UUID: {business_uuid}")
-        if BUSINESS_ID == DEFAULT_BUSINESS_ID:
-            print("WARNING: BUSINESS_ID is still the sample HAR business ID. Set WAVE_BUSINESS_ID to your own business ID.")
         if ATTACHMENT_BUSINESS_UUID:
             print("Using explicit WAVE_ATTACHMENT_BUSINESS_UUID override.")
         elif business_uuid != get_business_uuid(BUSINESS_ID):
@@ -503,10 +489,10 @@ def main(receiptPaths):
         for json_path, receipt_path in receiptPaths.items():
             print(f"Posting transaction for {json_path}")
             transaction_id = postTransaction(auth_token, json_path)
+            time.sleep(random.uniform(2, 5))
             if not transaction_id:
                 print(f"Skipping receipt attachment because transaction creation failed for {json_path}")
                 continue
-
             attachment_id = uploadReceipt(request_context, auth_token, business_uuid, receipt_path)
             if not attachment_id:
                 print(f"Skipping attachment linking because upload failed for {receipt_path}")
