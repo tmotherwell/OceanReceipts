@@ -2,12 +2,13 @@ import ExtractReceiptJSON
 import PostReceipts
 import MoveReceipts
 import sys
+import config
 from pathlib import Path
 
 def assembleReceipts():
     root = Path(__file__).resolve().parent
-    json_output_dir = root / "JSONOutput"
-    receipt_input_dir = root / "ReceiptInput"
+    json_output_dir = root / config.jsonDir
+    receipt_input_dir = root / config.receiptInputDir
     
     filePaths = {}
     
@@ -37,7 +38,7 @@ def assembleReceipts():
 def clearJSONFolder():
     """Delete all .json files from the JSONOutput folder."""
     root = Path(__file__).resolve().parent
-    json_output_dir = root / "JSONOutput"
+    json_output_dir = root / config.jsonDir
     
     if not json_output_dir.exists():
         return
@@ -47,11 +48,12 @@ def clearJSONFolder():
         print(f"Deleted {json_file.name}")
 
 def main():
-    receiptStorageRoot = Path("C:\\Users\\tmotherwell\\Documents\\Corp Docs\\Receipts")
+    receiptStorageRoot = Path(config.receiptStorageRoot)
     while True:
         print("Enter 1 to clear JSON output, scan receipts, and post")
         print("Enter 2 for posting only (if you already have the receipt JSON files).")
-        user_input = input("<1 or 2>: ")
+        print("Enter 3 to exit")
+        user_input = input("<1 or 2 or 3>: ")
 
         if user_input == "1":
             print("Clearing JSON Output folder")
@@ -87,8 +89,11 @@ def main():
 
             print("Done!")
             sys.exit(0)
+        elif user_input == "3":
+            print("Exiting...")
+            sys.exit(0)
         else:
-            print("Invalid input, please enter 1 or 2")
+            print("Invalid input, please enter 1 or 2 or 3")
 
 if __name__ == "__main__":
     main()

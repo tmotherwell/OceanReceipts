@@ -15,6 +15,7 @@ import difflib
 from pathlib import Path
 from typing import Optional, List, Tuple
 import sys
+import config
 
 try:
     from google.cloud import vision
@@ -574,8 +575,8 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
 def main():
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     root = Path(__file__).resolve().parent
-    input_dir = root / "ReceiptInput"
-    output_dir = root / "JSONOutput"
+    input_dir = root / config.receiptInputDir
+    output_dir = root / config.jsonDir
     input_dir.mkdir(exist_ok=True)
     output_dir.mkdir(exist_ok=True)
     imgs = list(find_images(input_dir))
