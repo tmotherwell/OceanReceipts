@@ -468,7 +468,10 @@ def linkReceiptToTransaction(request_context, business_id, auth_token, transacti
 def main(receiptPaths):
     playwright = sync_playwright().start()
     browser = playwright.chromium.launch(headless=False)
-    context = browser.new_context(record_har_path=HAR_OUTPUT_PATH)
+    if config.debug_SaveHAR:
+        context = browser.new_context(record_har_path=HAR_OUTPUT_PATH)
+    else:
+        context = browser.new_context()
     page = context.new_page()
 
     try:
@@ -504,9 +507,10 @@ def main(receiptPaths):
     finally:
         try:
             context.close()
-            print(f"Saved HAR output to {HAR_OUTPUT_PATH}")
+            if config.debug_SaveHAR:
+                print(f"Saved HAR output to {config.harOutputFilename}")
         except Exception as e:
-            print(f"Error closing HAR context: {e}")
+            print(f"Error closing context: {e}")
         try:
             browser.close()
         except Exception:

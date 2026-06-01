@@ -2,7 +2,6 @@
 jsonDir = "JSONOutput"
 receiptInputDir = "ReceiptInput"
 receiptStorageRoot = "C:\\Users\\tmotherwell\\Documents\\Corp Docs\\Receipts"
-harOutputFilename = "last_run_wave_requests.har"
 credentialsFilename = "secrets.txt"
 
 # Account-specific IDs
@@ -14,4 +13,8 @@ shareholderLoanAccountID = "QWNjb3VudDo1OTg3OTgyMzc1MDMxMTkxMDI7QnVzaW5lc3M6ZTQ1
 loginURL = "https://my.waveapps.com/login/"
 loginTimeout = 30000
 maxRetries = 5
+
+# Debug settings
 debug_SaveReturnedOCR = False
+debug_SaveHAR = False
+harOutputFilename = "last_run_wave_requests.har"
