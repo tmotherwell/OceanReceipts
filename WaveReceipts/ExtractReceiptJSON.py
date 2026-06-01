@@ -169,7 +169,8 @@ def normalize_merchant(s: str) -> str:
         return s
     s = s.strip()
     s = s.replace('[', ' ').replace(']', ' ').replace('?', ' ')
-    s = re.sub(r'[^A-Za-z0-9 &]', ' ', s)
+    # preserve hyphens in vendor names like 'Z-TECA'
+    s = re.sub(r'[^A-Za-z0-9 &-]', ' ', s)
     s = re.sub(r'\s+', ' ', s).strip()
     return s.title()
 
@@ -217,7 +218,7 @@ MERCHANTS = load_merchants(Path(__file__).resolve().parent)
 def parse_merchant(lines: List[str]) -> Optional[str]:
     # Consider single lines and merged top-line spans (1-3 lines) as candidates.
     ignore_tokens = re.compile(
-        r'\b(receipt|subtotal|tax|invoice|change|order|qty|unit|price|visa|mastercard|card|total|balance|amount|due|paid|payment|payments|fee|fees|surcharge|surcharges|trip|fare|insurance|support|privacy|terms|download|contact)\b',
+        r'\b(receipt|subtotal|tax|invoice|change|order|qty|unit|price|visa|mastercard|card|total|balance|amount|due|paid|payment|payments|fee|fees|surcharge|surcharges|trip|fare|insurance|support|privacy|terms|download|contact|purchase|transaction|record|username|approved|signature|retain|important|entry|ref#|auth#)\b',
         re.I,
     )
     merchant_keyword = re.compile(r'\b(restaurant|cafe|shop|store|market|bakery|bar|hotel|inn|bank|atm|scotiabank|aramark)\b', re.I)
@@ -225,6 +226,33 @@ def parse_merchant(lines: List[str]) -> Optional[str]:
         known = find_known_merchant_from_lines(lines)
         if known:
             return known
+
+    def is_potential_merchant(line: str) -> bool:
+        if ignore_tokens.search(line):
+            return False
+        core = re.sub(r'[^A-Za-z ]', '', line)
+        if len(core) < 3:
+            return False
+        words = [w for w in line.split() if re.search(r'[A-Za-z]', w)]
+        return len(words) >= 2 and len(re.sub(r'[^A-Za-z]', '', ' '.join(words))) >= 4
+
+    for ln in lines[:8]:
+        if not ln or not ln.strip():
+            continue
+        candidate = ln.strip()
+        if is_potential_merchant(candidate):
+            return normalize_merchant(candidate)
+
+    # Quick heuristic: prefer the first non-empty line if it looks like a merchant.
+    first_line = None
+    for ln in lines:
+        if ln and ln.strip():
+            first_line = ln.strip()
+            break
+    if first_line:
+        # treat as merchant if not an obvious generic token
+        if is_potential_merchant(first_line):
+            return normalize_merchant(first_line)
 
     candidates = []
     max_lines = min(6, len(lines))
@@ -388,6 +416,8 @@ def parse_date(text: str) -> Optional[str]:
         # New pattern for: Tue, Jan 6, 2026
         rf'{weekdays},\s+{months}\s+\d{{1,2}},\s+\d{{4}}', 
         r'\d{4}-\d{2}-\d{2}',
+        # pattern for hyphenated month names like 22-May-2026
+        rf'\d{{1,2}}-{months}-\d{{2,4}}',
         r'\d{1,2}/\d{1,2}/\d{2,4}',
         r'\d{1,2}-\d{1,2}-\d{2,4}',
         r'\d{1,2}\.\d{1,2}\.\d{2,4}',
@@ -417,44 +447,106 @@ def parse_date(text: str) -> Optional[str]:
 
 def parse_total(text: str) -> Optional[float]:
     lines = text.splitlines()
-    keyword = re.compile(r'\b(total|amount due|amount|grand total|balance due|paid|applied payment|applied payments|total due)\b', re.I)
-
     # currency-aware regex (includes common prefixes like CA$)
     currency_regex = re.compile(r'(?:CA\$|USD|EUR|GBP|AUD|CAD|[\$€£])\s*[-+]?\d[\d,]*(?:\.\d{2})?', re.I)
 
-    candidates: List[Tuple[float, float]] = []  # (amount, score)
+    def find_amount_after_phrases(phrases: List[str], line_window: int = 12) -> Optional[float]:
+        for idx, line in enumerate(lines):
+            low = line.lower()
+            for ph in phrases:
+                if ph in low:
+                    candidates: List[float] = []
+                    for j in range(idx, min(len(lines), idx + line_window)):
+                        l = lines[j]
+                        for m in re.findall(currency_regex, l):
+                            val = normalize_amount_string(m)
+                            if val is not None and val > 0:
+                                candidates.append(val)
+                        two = find_two_decimal_amounts(l)
+                        for val in two:
+                            if val > 0:
+                                candidates.append(val)
+                        if re.search(r'[\$€£]', l) or re.search(r'\d[.,]\d{2}\b', l):
+                            plain = [a for a in find_amounts(l) if a > 0]
+                            candidates.extend(plain)
+                        if re.search(r'\b(tip|suggestion|thank you|please come again|tips|tips suggestions|gratuity)\b', l, re.I):
+                            break
+                    if candidates:
+                        if ph in ('final total', 'grand total'):
+                            return round(candidates[0], 2)
+                        return round(candidates[-1], 2)
+        return None
+
+    total_due = find_amount_after_phrases(['total due', 'amount due', 'balance due', 'final total', 'grand total'], line_window=12)
+    if total_due is not None:
+        return total_due
+
+    keyword = re.compile(r'\b(total|amount due|amount|grand total|balance due|paid|applied payment|applied payments|total due)\b', re.I)
+
+    def is_discount_context(line: str) -> bool:
+        return bool(re.search(r'\b(discount|pre-discount|promo|savings|off|deduct|refund|adjustment|subtotal)\b', line, re.I))
 
     for idx, line in enumerate(lines):
         if keyword.search(line):
-            # scan the current line and a small window of following lines for amounts
-            for j in range(idx, min(len(lines), idx + 3)):
+            if is_discount_context(line):
+                # ignore lines like 'Discount Total' and standalone 'Subtotal' when searching for the final total
+                continue
+            nearby: List[Tuple[int, float, str, bool, bool]] = []
+            for j in range(idx, min(len(lines), idx + 6)):
                 l = lines[j]
-                # 1) currency-labeled amounts (strong signal)
                 for m in re.findall(currency_regex, l):
                     val = normalize_amount_string(m)
                     if val is None:
                         continue
-                    has_decimal = '.' in m or (',' in m and len(m.split(',')[-1]) == 2)
-                    # stronger weighting for explicit currency and decimal-formatted amounts
-                    score = (100.0) + (50.0 if has_decimal else 0.0) + (abs(val) / 1000.0)
-                    candidates.append((val, score))
-                # 2) explicit two-decimal tokens
+                    nearby.append((j - idx, val, l, True, True))
                 for t in find_two_decimal_amounts(l):
-                    # prefer two-decimal tokens even if currency symbol is missing
-                    score = 50.0 + (abs(t) / 1000.0)
-                    candidates.append((t, score))
-                # 3) any numeric tokens (filter obvious date-like tokens)
+                    nearby.append((j - idx, t, l, False, True))
+                line_has_currency = bool(re.search(r'(?:USD|EUR|GBP|AUD|CAD|[\$€£])', l, re.I))
+                line_is_total_related = bool(re.search(r'\b(total|amount|balance|due|charge|subtotal|grand total)\b', l, re.I))
                 for a in find_amounts(l):
-                    # skip numbers that are almost certainly date components (e.g., 01/29/2026)
                     if ('/' in l or '-' in l) and re.search(r'\d{1,2}[/-]\d{1,2}[/-]\d{2,4}', l) and abs(a) < 100:
                         continue
-                    score = abs(a) / 1000.0
-                    candidates.append((a, score))
+                    if re.search(r'\b(card|mastercard|visa|amex|auth|reference|mid|transaction)\b', l, re.I) and (100 <= abs(a) <= 10000):
+                        continue
+                    if not line_has_currency and not line_is_total_related:
+                        if not re.search(r'\d[.,]\d{2}\b', l):
+                            continue
+                        if len(re.findall(r'\d+', l)) > 1:
+                            continue
+                    nearby.append((j - idx, a, l, False, False))
 
-    # If we found candidates near keyword lines, pick the best by score (currency & decimals prioritized)
-    if candidates:
-        best = max(candidates, key=lambda x: (x[1], abs(x[0])))
-        return round(abs(best[0]), 2)
+            currency_candidates = [val for pos, val, l, is_curr, is_two in nearby if val > 0 and is_curr and not is_discount_context(l)]
+            if currency_candidates:
+                return round(currency_candidates[-1], 2)
+
+            two_dec_candidates = [val for pos, val, l, is_curr, is_two in nearby if val > 0 and is_two and not is_discount_context(l)]
+            if two_dec_candidates:
+                return round(two_dec_candidates[-1], 2)
+
+            candidates: List[Tuple[float, float]] = []
+            for pos, val, l, is_curr, is_two in nearby:
+                if val is None or val <= 0:
+                    continue
+                score = 0.0
+                if is_curr:
+                    score += 50.0
+                if is_two:
+                    score += 30.0
+                score += max(0.0, (10 - pos)) * 2.0
+                if val < 100:
+                    score += 5.0
+                elif val < 1000:
+                    score += 2.0
+                if val > 10000:
+                    score -= 20.0
+                if not is_discount_context(l):
+                    score += 5.0
+                if re.search(r'\b(total|amount|balance|due|charge|subtotal|grand total)\b', l, re.I):
+                    score += 8.0
+                candidates.append((val, score, l))
+            if candidates:
+                best = max(candidates, key=lambda x: (x[1], -abs(x[0])))
+                return round(abs(best[0]), 2)
 
     # Fallbacks: prefer explicit two-decimal tokens anywhere in the text
     two = find_two_decimal_amounts(text)
@@ -505,6 +597,12 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
         return out_path, image_path
 
     # 1. Primary Extraction from cleaned text
+    
+    # output raw OCR output for debugging purposes
+    if config.debug_SaveReturnedOCR:
+        raw_ocr_path = output_dir / f"{image_path.stem}_raw.txt"
+        raw_ocr_path.write_text(text, encoding="utf-8")
+
     lines = [l for l in text.splitlines() if l.strip()]
     result["merchant"] = parse_merchant(lines)
     result["transaction_date"] = parse_date(text)

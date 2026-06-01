@@ -47,6 +47,10 @@ def clearJSONFolder():
         json_file.unlink()
         print(f"Deleted {json_file.name}")
 
+    for text_file in json_output_dir.glob("*.txt"):
+        text_file.unlink()
+        print(f"Deleted {text_file.name}")
+
 def main():
     receiptStorageRoot = Path(config.receiptStorageRoot)
     while True:
