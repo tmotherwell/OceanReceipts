@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Gmail Native PDF Exporter",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "gmail-native-pdf-exporter@localdev.internal"
+    }
+  },
+  "version": "2.1",
+  "description": "Select multiple Gmail threads and export them natively to PDF.",
+  "permissions": ["activeTab", "downloads", "scripting", "tabs"],
+  "host_permissions": ["*://mail.google.com/*"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://mail.google.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
