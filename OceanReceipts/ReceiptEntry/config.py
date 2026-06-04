@@ -7,7 +7,7 @@ credentialsFilename = "secrets.txt"
 # Account-specific IDs
 businessID = "QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
 uncategorizedExpenseAcccountID = "QWNjb3VudDo1OTg3OTgyMzgzMTY4MTQxMTI7QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
-shareholderLoanAccountID = "QWNjb3VudDo1OTg3OTgyMzc1MDMxMTkxMDI7QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
+sourceAccountID = "QWNjb3VudDo1OTg3OTgyMzc1MDMxMTkxMDI7QnVzaW5lc3M6ZTQ1N2YwZjQtMzM4OC00NDM3LWI3YjUtZWU2NTI1ZWE5YWRi"
 
 # Automation settings
 loginURL = "https://my.waveapps.com/login/"
@@ -17,4 +17,4 @@ maxRetries = 5
 # Debug settings
 debug_SaveReturnedOCR = False
 debug_SaveHAR = False
-harOutputFilename = "last_run_wave_requests.har"
+debug_harOutputFilename = "last_run_wave_requests.har"

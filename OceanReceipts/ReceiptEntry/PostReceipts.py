@@ -10,7 +10,7 @@ import random
 # GraphQL internal APIs use the base64-style business ID.
 BUSINESS_ID = config.businessID
 ATTACHMENT_BUSINESS_UUID = os.getenv("WAVE_ATTACHMENT_BUSINESS_UUID")
-HAR_OUTPUT_PATH = config.harOutputFilename
+HAR_OUTPUT_PATH = config.debug_harOutputFilename
 
 # Some workflows also need the plain UUID business ID for REST endpoints.
 def get_business_uuid(base64_business_id):
@@ -205,7 +205,7 @@ def postTransaction(auth_token, receipt_json_path):
             "anchorLineItem": {
                 "category": {
                     "type": "ACCOUNT_ID",
-                    "accountId": config.shareholderLoanAccountID
+                    "accountId": config.sourceAccountID
                 },
                 "amount": amount,
                 "itemType": "CREDIT"
@@ -508,7 +508,7 @@ def main(receiptPaths):
         try:
             context.close()
             if config.debug_SaveHAR:
-                print(f"Saved HAR output to {config.harOutputFilename}")
+                print(f"Saved HAR output to {config.debug_harOutputFilename}")
         except Exception as e:
             print(f"Error closing context: {e}")
         try:
