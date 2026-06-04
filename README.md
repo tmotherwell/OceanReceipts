@@ -17,21 +17,24 @@ This set of Python scripts automates the entry of receipt transactions and image
 
 ### Workflow
 1. Scan input image/pdf files, send to Google Vision for OCR
-2. Parse results and extract Transaction Date, Merchant, and Total
-3. Write results to output JSON file
-4. Rename input files to match scanned results (*date_merchcnt*)
+2. Parse OCR results and extract Transaction Date, Merchant, and Total
+3. Write extracted results to output JSON file
+4. Rename input files to match scanned results (*date_merchant*)
 5. Log in to Wave using Playwright and retrieve auth token from request headers
 6. Upload transaction via GraphQL HTTP request
-7. Upload receipt image
-8. Link receipt image to receipt transaction
+7. Upload receipt image via GraphQL HTTP request
+8. Link receipt image to receipt transaction via GraphQL HTTP request
 9. Move receipt image to long term archive folder and delete JSON files
 
 ### Setup
 
-1. Set up Google Vision
+1. Set up Google Vision (follow the [guide](https://docs.cloud.google.com/vision/docs/setup))
 2. Set up python packages by installing requirements.txt
-3. Set script config values (see below)
-4. Run BeginExpenseEntry.py to begin
+3. Create a secrets.txt containing your Wave credentials (see Configuation for format)
+4. Run ExtractID.py to get your Wave account IDs
+5. Set script config values (see below)
+6. Add common merchants to merchants.json to improve matching
+7. Run BeginExpenseEntry.py to begin
 
 ### Configuration (config.py)
 **File Paths**
@@ -42,7 +45,7 @@ This set of Python scripts automates the entry of receipt transactions and image
 
 **Account IDs**
 1. businessID: Alphanumeric string representing your business in Wave. Extracted from HTTP requests, note this is not the string contained in your URL
-2. uncategorizedExpenseAccountID: Wave account ID for uncategorized expenses
+2. uncategorizedExpenseAccountID: Wave account ID for uncategorized expenses. Recommended to have all auto-imported expenses end up there so that they can be easily filtered for later (in case of errors)
 3. sourceAccountID: Wave account ID for where the money is coming from. Typically shareholder loan for expenses paid by personal credit card
 
 **Automation Settings**
