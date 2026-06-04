@@ -515,13 +515,22 @@ def parse_total(text: str) -> Optional[float]:
                             continue
                     nearby.append((j - idx, a, l, False, False))
 
+            def total_summary_context(index: int) -> bool:
+                context_range = lines[max(0, index - 3):index]
+                context_text = "\n".join(context_range)
+                return bool(re.search(r'\b(subtotal|hst|gst|pst|qst|tax|discount)\b', context_text, re.I))
+
             currency_candidates = [val for pos, val, l, is_curr, is_two in nearby if val > 0 and is_curr and not is_discount_context(l)]
             if currency_candidates:
-                return round(currency_candidates[-1], 2)
+                if total_summary_context(idx):
+                    return round(currency_candidates[-1], 2)
+                return round(currency_candidates[0], 2)
 
             two_dec_candidates = [val for pos, val, l, is_curr, is_two in nearby if val > 0 and is_two and not is_discount_context(l)]
             if two_dec_candidates:
-                return round(two_dec_candidates[-1], 2)
+                if total_summary_context(idx):
+                    return round(two_dec_candidates[-1], 2)
+                return round(two_dec_candidates[0], 2)
 
             candidates: List[Tuple[float, float]] = []
             for pos, val, l, is_curr, is_two in nearby:
