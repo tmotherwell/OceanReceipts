@@ -5,7 +5,43 @@ if (window.location.href.includes('ext_print=1')) {
     document.documentElement.appendChild(script);
 }
 
-// 2. Wrap the UI injection so it waits for the page body to exist
+// 2. Helper to get unique, visible thread IDs (Ported from Chrome)
+function getUniqueSelectedThreadIds() {
+    const selectedElements = document.querySelectorAll(
+        'div[role="checkbox"][aria-checked="true"], [role="row"][aria-selected="true"], [role="row"][aria-checked="true"]'
+    );
+    const threadIds = new Set(); // A Set automatically prevents duplicates
+
+    selectedElements.forEach(node => {
+        // Ignore hidden or detached selection markers
+        if (node.offsetWidth === 0 || node.offsetHeight === 0) return;
+
+        const row = node.closest('tr, [role="row"]') || node;
+        let threadId = row?.getAttribute('data-legacy-thread-id') || row?.getAttribute('data-thread-id');
+
+        if (!threadId) {
+            const childWithId = row?.querySelector('[data-legacy-thread-id], [data-thread-id]');
+            if (childWithId) {
+                threadId = childWithId.getAttribute('data-legacy-thread-id') || childWithId.getAttribute('data-thread-id');
+            }
+        }
+
+        if (!threadId && node !== row) {
+            const directWithId = node.querySelector('[data-legacy-thread-id], [data-thread-id]');
+            if (directWithId) {
+                threadId = directWithId.getAttribute('data-legacy-thread-id') || directWithId.getAttribute('data-thread-id');
+            }
+        }
+
+        if (threadId) {
+            threadIds.add(threadId.replace(/^thread-f:/, ''));
+        }
+    });
+
+    return Array.from(threadIds);
+}
+
+// 3. Wrap the UI injection so it waits for the page body to exist
 const initUI = () => {
     // Prevent the button from showing up on the actual print popup pages
     if (window.location.href.includes('ext_print=1') || window.location.search.includes('view=pt')) {
@@ -35,10 +71,11 @@ const initUI = () => {
     fab.onmouseout = () => fab.style.backgroundColor = '#1a73e8';
     document.body.appendChild(fab);
 
+    // Monitor for checkbox selections using the unique ID helper
     document.addEventListener('click', () => {
         setTimeout(() => {
-            const checkedBoxes = document.querySelectorAll('div[role="checkbox"][aria-checked="true"]');
-            const selectedCount = checkedBoxes.length;
+            const uniqueIds = getUniqueSelectedThreadIds();
+            const selectedCount = uniqueIds.length;
 
             if (selectedCount > 0) {
                 fab.style.display = 'block';
@@ -49,28 +86,19 @@ const initUI = () => {
         }, 200); 
     });
 
+    // Handle the Export Process
     fab.addEventListener('click', async () => {
-        const checkedBoxes = document.querySelectorAll('div[role="checkbox"][aria-checked="true"]');
-        const threadIds = [];
+        const uniqueIds = getUniqueSelectedThreadIds();
 
-        checkedBoxes.forEach(cb => {
-            const row = cb.closest('tr') || cb.closest('[role="row"]');
-            if (row) {
-                let threadId = row.getAttribute('data-legacy-thread-id') || row.getAttribute('data-thread-id');
-                if (!threadId) {
-                    const childWithId = row.querySelector('[data-legacy-thread-id], [data-thread-id]');
-                    if (childWithId) threadId = childWithId.getAttribute('data-legacy-thread-id') || childWithId.getAttribute('data-thread-id');
-                }
-                if (threadId) threadIds.push(threadId.replace('thread-f:', ''));
-            }
-        });
-
-        if (threadIds.length === 0) return alert("Could not detect thread IDs.");
+        if (uniqueIds.length === 0) {
+            alert("Could not detect thread IDs.");
+            return;
+        }
 
         fab.innerText = "⏳ Exporting natively... Please wait";
         fab.disabled = true;
 
-        for (const id of threadIds) {
+        for (const id of uniqueIds) {
             await processThread(id);
         }
 
@@ -89,12 +117,12 @@ if (document.readyState === 'loading') {
     initUI();
 }
 
-// 3. Process Thread Logic
+// 4. Process Thread Logic
 async function processThread(threadId) {
     const match = window.location.pathname.match(/\/mail\/u\/[0-9]+/);
     const basePath = match ? match[0] : '/mail/u/0';
     
-    // We add &ext_print=1 here so our script at the top of the file knows to suppress Gmail
+    // FIREFOX SPECIFIC: We add &ext_print=1 here so our script at the top of the file knows to suppress Gmail
     const printUrl = `${window.location.origin}${basePath}/?ui=2&ik=&view=pt&search=all&th=${threadId}&ext_print=1`;
 
     try {
@@ -103,17 +131,24 @@ async function processThread(threadId) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(htmlText, 'text/html');
 
+        // PORTED FROM CHROME: Upgraded metadata scraping for dynamic filename
         const subjectRaw = doc.querySelector('h2')?.innerText || "Email_Thread";
-        const subject = subjectRaw.replace(/[^a-z0-9]/gi, '_').substring(0, 40);
+        const subject = subjectRaw.replace(/[^a-z0-9]/gi, '_').substring(0, 60);
 
-        const dateRaw = doc.querySelector('table tr')?.innerText.match(/\w+ \d+, \d{4}/)?.[0] || new Date().toLocaleDateString();
-        const date = dateRaw.replace(/[^a-z0-9]/gi, '_');
+        const fullDateMatch = doc.querySelector('table tr')?.innerText.match(/[a-zA-Z]+, [a-zA-Z]+ \d{1,2}, \d{4} at \d{1,2}:\d{2}\s*[AP]M/i);
+        const backupDateMatch = doc.querySelector('table tr')?.innerText.match(/\w+ \d+, \d{4}/);
+        
+        const dateRaw = fullDateMatch?.[0] || backupDateMatch?.[0] || new Date().toLocaleString();
+        const dateFormatted = dateRaw.replace(/[^a-z0-9]/gi, '_');
+
+        const filename = `${subject}_${dateFormatted}.pdf`;
 
         await new Promise((resolve) => {
+            // FIREFOX SPECIFIC: browser.runtime API
             browser.runtime.sendMessage({
                 action: "printNativePDF",
                 printUrl: printUrl,
-                filename: `${date}_${subject}.pdf`
+                filename: filename
             }, () => resolve());
         });
 

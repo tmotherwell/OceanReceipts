@@ -1,7 +1,7 @@
 # Repository Contents
 
 ## GmailMultiPrint
-It is common to receive business receipts via email. This browser extension allows you to export multiple Gmail threads to local PDF files all in one shot (vs the current approach of using the print dialogue to save them one by one). Note that attached PDFs are not included, those must be downloaded directly. Recommend to turn chrome setting to prompt for file location of each download OFF
+It is common to receive business receipts via email. This browser extension allows you to export multiple Gmail threads to local PDF files all in one shot (vs the current approach of using the print dialogue to save them one by one). Note PDFs attached to emails are not included, those must be downloaded directly. Recommend to turn OFF chrome setting that prompts for file location of each download
 
 **Chrome:**
 1. Go to Manage Extensions
@@ -26,7 +26,7 @@ This set of Python scripts automates the entry of receipt transactions and image
 1. Scan input image/pdf file folder, send to Google Vision for OCR
 2. Parse OCR results and extract Transaction Date, Merchant, and Total
 3. Write extracted results to output JSON file
-4. Rename input files to match scanned results (*date_merchant*)
+4. Rename input files to match scanned results (*date_merchant_uniqueNumber*)
 5. Log in to Wave using Playwright and retrieve auth token from request headers
 6. Upload transaction via GraphQL HTTP request
 7. Upload receipt image via GraphQL HTTP request
