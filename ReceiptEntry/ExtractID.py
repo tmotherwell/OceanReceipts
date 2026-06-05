@@ -78,6 +78,7 @@ def getIDs(page, timeout=60):
     def handle_request(request):
         try:
             if 'gql.waveapps.com/graphql' in request.url and request.method == 'POST':
+                print ("Found a POST method") # DEBUG
                 post = _get_post_data(request)
                 if not post:
                     return
@@ -96,7 +97,9 @@ def getIDs(page, timeout=60):
                 if not data:
                     return
                 op = data.get('operationName')
+                print ("Operation Name: " + str(op)) # DEBUG
                 if op == 'ListAccountsForCategory':
+                    print ("Found ListAccountsForCategory operation") # DEBUG
                     state['found_request'] = True
                     vars_obj = data.get('variables', {})
                     business_id = parse_possible_business_from_vars(vars_obj)
@@ -156,7 +159,7 @@ def getIDs(page, timeout=60):
                     if biz:
                         id_dict['business'] = biz
                 accounts = _find_account_objects(body)
-                print(f"Found {len(accounts)} account objects in response")
+                print(f"Found {len(accounts)} account objects in response") # DEBUG
                 for acc in accounts:
                     name = acc.get('name') or acc.get('accountName') or acc.get('title')
                     aid = acc.get('id') or acc.get('accountId') or acc.get('account_id')
@@ -182,7 +185,7 @@ def getIDs(page, timeout=60):
                 pass
         try:
             business_url = page.url.rsplit("/", 2)[0]
-            page.goto(business_url + "/transactions")
+            page.goto(business_url + "/transactions", wait_until="networkidle", timeout=10000)
         except Exception:
             pass
     except Exception as e:

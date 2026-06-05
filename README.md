@@ -11,12 +11,19 @@ It is common to receive business receipts via email. This browser extension allo
 
 **Firefox:**
 
+1. Enter "about:debugging" in the URL bar
+2. Select "This Firefox"
+3. Click "Load Temporary Add-on"
+4. Open the Firefox folder and select any file inside
+5. The extension remains installed until you remove it or restart Firefox
+6. Verify it's active: Navigate to Gmail, select 2 or more threads, look for a floating blue button to appear in the bottom right corner
+
 
 ## ReceiptEntry
-This set of Python scripts automates the entry of receipt transactions and images into Wave Accounting
+This set of Python scripts automates the entry of receipt transactions and images into Wave Accounting. I made this primarily because I didn't want to pay $20/mo for their receipt scanning service (which used to be free, hi enshittification!). It uses Google Vision as an OCR backend since it is available to anyone with a google account and is free for the first 1000 requests per month (I don't have *nearly* that many receipts, but your use case may be different). The script uploads transactions and receipts by mimicking the requests sent by the front-end, so it should be robust even if the UI changes.
 
-### Workflow
-1. Scan input image/pdf files, send to Google Vision for OCR
+### Script Workflow
+1. Scan input image/pdf file folder, send to Google Vision for OCR
 2. Parse OCR results and extract Transaction Date, Merchant, and Total
 3. Write extracted results to output JSON file
 4. Rename input files to match scanned results (*date_merchant*)
@@ -28,13 +35,22 @@ This set of Python scripts automates the entry of receipt transactions and image
 
 ### Setup
 
-1. Set up Google Vision (follow the [guide](https://docs.cloud.google.com/vision/docs/setup))
-2. Set up python packages by installing requirements.txt
-3. Create a secrets.txt containing your Wave credentials (see Configuation for format)
-4. Run ExtractID.py to get your Wave account IDs
-5. Set script config values (see below)
-6. Add common merchants to merchants.json to improve matching
-7. Run BeginExpenseEntry.py to begin
+0. Clone repository to local folder of your choice
+1. Set up Google Vision on your machine (follow the [guide](https://docs.cloud.google.com/vision/docs/setup))
+2. Install python 3.xx to your machine
+3. Install the [python VSCode extension](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace)
+4. Open VSCode, Create a virtual python environment
+    a. Open VSCode Command Pallette (Ctrl-Shift-P)
+    b. Type Python Create Environment
+    c. Select Venv
+    d. Select your python.exe install location
+    e. Check the dependencies box, make sure it points to ReceiptEntry\requirements.txt, hit OK
+    f. In the terminal, type 'playwright install' and hit enter
+5. Create a secrets.txt containing your Wave credentials (see Configuation for format or to change filename), store in ReceiptEntry folder
+6. Run ExtractID.py to get your Wave account IDs
+7. Set script config values (see below)
+8. Add common merchants to merchants.json to improve matching (this is helpful when the merchant name is not present in all the common places, mostly happens with email receipts)
+9. Run BeginExpenseEntry.py to begin
 
 ### Configuration (config.py)
 **File Paths**

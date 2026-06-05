@@ -2,6 +2,26 @@ import os
 from pathlib import Path
 import shutil
 
+def get_unique_destination(target_path: Path) -> Path:
+    """
+    Checks if a file exists at the target destination. If it does, 
+    appends an incrementing counter (e.g., filename_1.ext, filename_2.ext) 
+    until a free path is found.
+    """
+    if not target_path.exists():
+        return target_path
+        
+    stem = target_path.stem
+    suffix = target_path.suffix
+    parent = target_path.parent
+    counter = 1
+    
+    while True:
+        new_path = parent / f"{stem}_{counter}{suffix}"
+        if not new_path.exists():
+            return new_path
+        counter += 1
+
 def main(receiptPaths, receiptStorageRoot):
     """Move receipt files to folders organized by year extracted from filename.
     
@@ -31,11 +51,15 @@ def main(receiptPaths, receiptStorageRoot):
         year_folder = storage_root / year
         year_folder.mkdir(parents=True, exist_ok=True)
         
-        # Move file to year folder
-        destination = year_folder / filename
+        # Determine initial destination path
+        initial_destination = year_folder / filename
+        
+        # Resolve any naming conflicts in the destination folder
+        final_destination = get_unique_destination(initial_destination)
+        
+        # Move file to the unique final destination path
         try:
-            shutil.move(str(receipt_file), str(destination))
-            print(f"Moved {filename} to {year_folder}")
+            shutil.move(str(receipt_file), str(final_destination))
+            print(f"Moved {filename} to {final_destination}")
         except Exception as e:
-            print(f"Error moving {filename}: {e}")
-
+            print(f"Error moving {filename} to {final_destination}: {e}")

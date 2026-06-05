@@ -1,8 +1,2 @@
-# Ignore local skill configs and secrets
-.github/skills/wave-enter-expense/config.local.yaml
-.github/skills/wave-enter-expense/secrets/
-.github/skills/wave-enter-expense/secrets/*
 secrets.txt
-token.txt
-
-# Add other local ignores below
+accountIDs.json

@@ -42,9 +42,6 @@ except Exception:
     date_parse = None
 
 
-# Overrides removed: this runner no longer supports per-file manual overrides.
-
-
 def find_images(input_dir: Path):
     exts = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".pdf")
     for path in sorted(input_dir.iterdir()):
@@ -575,6 +572,24 @@ def parse_total(text: str) -> Optional[float]:
 
     return None
 
+def get_unique_path(target_path: Path) -> Path:
+    """
+    Checks if a file exists. If it does, appends an incrementing counter 
+    (e.g., filename_1.json, filename_2.json) until a free path is found.
+    """
+    if not target_path.exists():
+        return target_path
+        
+    stem = target_path.stem
+    suffix = target_path.suffix
+    parent = target_path.parent
+    counter = 1
+    
+    while True:
+        new_path = parent / f"{stem}_{counter}{suffix}"
+        if not new_path.exists():
+            return new_path
+        counter += 1
 
 def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
     result = {"merchant": None, "transaction_date": None, "total": None}
@@ -587,23 +602,8 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
         else:
             text, _ = ocr_image(image_path)
     except Exception as e:
-        result["__error"] = f"OCR failed: {e}"
-        out_path = output_dir / f"{image_path.stem}_ocr.json"
-        out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))
-
-        date_part = sanitize_filename_component(result.get("transaction_date"), "dateUnknown")
-        merchant_part = sanitize_filename_component(result.get("merchant"), "merchantUnknown")
-        new_stem = f"{date_part}_{merchant_part}"
-
-        new_out_path = out_path.with_name(f"{new_stem}{out_path.suffix}")
-        new_input_path = image_path.with_name(f"{new_stem}{image_path.suffix}")
-
-        if new_out_path != out_path:
-            out_path = out_path.rename(new_out_path)
-        if new_input_path != image_path:
-            image_path = image_path.rename(new_input_path)
-
-        return out_path, image_path
+       logging.error(f"OCR failed for {image_path.name}: {e}")
+       return None, None
 
     # 1. Primary Extraction from cleaned text
     
@@ -667,15 +667,26 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
     merchant_part = sanitize_filename_component(result.get("merchant"), "merchantUnknown")
     new_stem = f"{date_part}_{merchant_part}"
 
-    new_out_path = out_path.with_name(f"{new_stem}{out_path.suffix}")
-    new_input_path = image_path.with_name(f"{new_stem}{image_path.suffix}")
+    proposed_out_path = out_path.with_name(f"{new_stem}{out_path.suffix}")
+    final_out_path = get_unique_path(proposed_out_path)
 
-    if new_out_path != out_path:
-        out_path = out_path.rename(new_out_path)
-    if new_input_path != image_path:
-        image_path = image_path.rename(new_input_path)
+    # 2. Resolve unique path for the Input Image file
+    proposed_input_path = image_path.with_name(f"{new_stem}{image_path.suffix}")
+    final_input_path = get_unique_path(proposed_input_path)
 
-    logging.info(f"Extracted merchant: {result['merchant']}, date: {result['transaction_date']}, total: {result['total_formatted']}")
+    # Rename JSON file if the final path differs from the initial temporary one
+    if final_out_path != out_path:
+        out_path = out_path.rename(final_out_path)
+    else:
+        out_path = final_out_path
+
+    # Rename Input Image file if the final path differs from its original location
+    if final_input_path != image_path:
+        image_path = image_path.rename(final_input_path)
+    else:
+        image_path = final_input_path
+
+    logging.info(f"Extracted merchant: {result['merchant']}, date: {result['transaction_date']}, total: {result.get('total_formatted', 'None')}")
     return out_path, image_path
 
 
@@ -694,7 +705,8 @@ def main():
     for img in imgs:
         # logging.info(f"Processing {img.name}")
         out_path, renamed_input_path = process_file(img, output_dir)
-        output_mapping[str(out_path)] = str(renamed_input_path)
+        if out_path and renamed_input_path:
+            output_mapping[str(out_path)] = str(renamed_input_path)
     
     while True:
         continueDecision = input("Continue to receipt entry? (y/n)")
