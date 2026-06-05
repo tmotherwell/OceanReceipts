@@ -1,0 +1,26 @@
+PARAMOUNT FINE FOODS
+QUEENSWAY
+1585 The Queensway
+Etobicoke,
+ON MSZ 1T8
+(647) 748-1585
+#11111
+TABLE #5 CLIENT #1
+2026-01-17 05:20:33 PM SERVER NAME
+Fattoush
+$14.99
+1x -> Add Falafel 3pcs
+$6.99
+Chicken Sh Boat
+$16.99
+1x -> No Change
+$0.00
+Bread Basket 2 pcs
+$0.00
+SUB-TOTAL
+$38.97
+HST (111111111RT0001)
+$5.07
+TOTAL
+Thank You !
+$44.04

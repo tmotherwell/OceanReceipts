@@ -1,0 +1,26 @@
+-TRANSACTION RECORD-
+THE KABOB GUYS
+147 SPADINA AVE
+TORONTO ON
+M5V2L7
+Purchase
+Apr 24,2026
+MASTERCARD
+13:01:48
+************1111
+Entry: Tap EMV (H)
+Ref#: 111-0TE0CN00U6FCVZS
+Auth#: 11111J Response: 01-111
+Order:
+Username:
+Amount
+MG01777050105552
+TKGSpadina
+$ 22.35
+A0000000041010 PC Mastercard
+TVR 0000008001
+FF/DT 20
+Approved
+Signature Not Required
+Important Retain this copy for
+your record

@@ -15,6 +15,6 @@ loginTimeout = 30000
 maxRetries = 5
 
 # Debug settings
-debug_SaveReturnedOCR = False
+debug_SaveReturnedOCR = True
 debug_SaveHAR = False
 debug_harOutputFilename = "last_run_wave_requests.har"

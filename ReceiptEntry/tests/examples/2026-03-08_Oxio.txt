@@ -1,0 +1,49 @@
+OXIO
+1 PLACE VILLE MARIE #3301
+MONTREAL, QC, H3B 3N2
+SCRIPT USER
+123 FAKE ST
+ANYWHERE, ON, X1X 2X3
+Billing cycle
+03/08/2026 - 04/07/2026
+Statement number
+OXIO-11111111
+Due date
+03/29/2026
+Total amount due
+CA$0.00
+Your account number: 111111
+Use this number for all bank payments.
+Add zeros (0) in front of this number when 8 characters are required.
+Ongoing charges
+    CA$50.00
+ 
+Taxes/Fees
+    CA$6.50
+ 
+Applied payments
+    -CA$56.50
+ 
+Total due 03/29/2026
+CA$0.00
+You have any questions?
+Contact us at oxio.ca/en/support, read our billing FAQ, or download our bill explainer.
+ 
+ 
+Do you have a complaint regarding a telecom or residential TV service that we haven't been able to resolve? The independent Commission for Complaints for Telecom-television
+Services (CCTS) may be able to assist you free of charge: www.ccts-cprst.ca or 1-888-221-1687. 
+ For information about your rights, see: https://crtc.gc.ca/eng/internet/codesimpl.htm. 
+ 
+Refer a friend and earn a free month of internet.
+Every successful referral gets you and your friend a free month of oxio.
+Learn more
+
+Ongoing charges
+Internet: ⬇️75 mbit/s, ⬆️30 mbit/s
+CA$50.00
+Taxes/Fees
+HST 81111111
+CA$6.50
+Applied payments
+Payment on 03/08/2026
+CA$56.50

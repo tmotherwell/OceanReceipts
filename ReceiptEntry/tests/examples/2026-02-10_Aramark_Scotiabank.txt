@@ -1,0 +1,24 @@
+Aramark Scotiabank
+Scotiaworks Cafeteria
+333 King Street West
+Toronto M5A OE1
+Close Date: Feb 10, 2026 12:30:58
+Date: Feb 10, 2026 12:31:00
+able: Cas-11035248
+ableTransId: 11035248
+Server: server name.
+1 Daily Special 1
+10.75
+Subtotal
+10.75
+GST
+0.54
+HST8%F(ON)
+0.86
+Total
+12.15
+MASTER(Completed)
+-12.15
+Balance
+0.00
+k Forward to Seeing you Again!Sc

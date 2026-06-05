@@ -453,7 +453,7 @@ def parse_total(text: str) -> Optional[float]:
             for ph in phrases:
                 if ph in low:
                     candidates: List[float] = []
-                    for j in range(idx, min(len(lines), idx + line_window)):
+                    for j in range(idx, min(len(lines), idx + line_window + 1)):
                         l = lines[j]
                         for m in re.findall(currency_regex, l):
                             val = normalize_amount_string(m)
@@ -591,8 +591,7 @@ def get_unique_path(target_path: Path) -> Path:
             return new_path
         counter += 1
 
-def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
-    result = {"merchant": None, "transaction_date": None, "total": None}
+def send_file_for_OCR(image_path: Path) -> Tuple[str,str]:
     header_text = ""
     is_pdf = image_path.suffix.lower() == ".pdf"
 
@@ -601,17 +600,14 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
             text, header_text = process_pdf(image_path)
         else:
             text, _ = ocr_image(image_path)
+        return text, header_text
     except Exception as e:
        logging.error(f"OCR failed for {image_path.name}: {e}")
-       return None, None
+       return None
 
+def process_returned_OCR(text: str, header_text: str, image_path: Path):
+    result = {"merchant": None, "transaction_date": None, "total": None}
     # 1. Primary Extraction from cleaned text
-    
-    # output raw OCR output for debugging purposes
-    if config.debug_SaveReturnedOCR:
-        raw_ocr_path = output_dir / f"{image_path.stem}_raw.txt"
-        raw_ocr_path.write_text(text, encoding="utf-8")
-
     lines = [l for l in text.splitlines() if l.strip()]
     result["merchant"] = parse_merchant(lines)
     result["transaction_date"] = parse_date(text)
@@ -659,6 +655,22 @@ def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
         missing.append("total")
     if missing:
         result["__error"] = f"Could not reliably extract: {', '.join(missing)}"
+
+    return result
+
+def process_file(image_path: Path, output_dir: Path) -> Tuple[Path, Path]:
+    result = {"merchant": None, "transaction_date": None, "total": None}
+    text, header_text = send_file_for_OCR(image_path)
+    if text is None:
+            return None,None
+    # output raw OCR output for debugging purposes
+    if config.debug_SaveReturnedOCR:
+        raw_ocr_path = output_dir / f"{image_path.stem}.txt"
+        raw_header_path = output_dir / f"{image_path.stem}.head"
+        raw_ocr_path.write_text(text, encoding="utf-8")
+        raw_header_path.write_text(header_text, encoding="utf-8")
+
+    result = process_returned_OCR(text, header_text, image_path)
 
     out_path = output_dir / f"{image_path.stem}_ocr.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2))

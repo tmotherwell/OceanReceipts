@@ -1,0 +1,33 @@
+Z-TECA
+COCINA
+Z-teca Cocina Mexicana
+333 BAY ST UNIT F3, Concourse Level
+TORONTO, ON M5H 2R2
+(416) 368-0871
+https://www.z-tecacocina.com
+HST #111111111
+ORDER: 150
+Dine In
+22-May-2026 1:35:13p.m.
+Transaction 046198
+1 Pollo Asado Burrito
+Subtotal
+HST
+Total
+CREDIT CARD SALE
+MASTERCARD 1111
+$15.95
+$15.95
+13%
+$2.07
+$18.02
+$18.02
+Retain this copy for statement validation
+22-May-2026 1:35:31p.m.
+$18.02 | Method: CONTACTLESS
+Mastercard XXXXXXXXXXXX1111
+Reference ID: 614200538111
+Auth ID: 05955J
+MID: ********6188
+AID: A0000000041010
+AthNtwkNm: MASTERCARD

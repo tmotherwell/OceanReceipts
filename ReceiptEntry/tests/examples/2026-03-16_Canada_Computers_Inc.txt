@@ -1,0 +1,65 @@
+Canada Computers Inc.
+168 Ultimate Dr, Richmond Hill, ON L4S 8M8.
+Tel:  905-946-9688
+Bill To
+Ship To
+Recipient Name
+123 Fake St
+Anywhere Ontario CANADA
+X1X 2X3 111-867-5309
+Recipient Name
+123 Fake St  Toronto Ontario CANADA
+X1X 2X3 111-867-5309
+INVOICE
+GST/HST/TPS
+QST/TVQ
+BC  PST
+MB  PST
+SK  PST
+: 111111111RT0001
+: 1111111111TQ0002
+: 1111-1111
+: 111111111MT0001
+: 1111111
+Ship Order
+SPHD11111111
+SO No
+SONL03916794
+Invoice No
+ARHD11111111
+Date
+03/16/2026
+P.O.NO
+NREURHMPZ
+TERMS
+COD
+SALES REP.
+ORDER DATE
+03/14/2026
+SHIP VIA
+Expedited Parcel
+Item Code
+Description
+Quantity
+Price
+Extended
+HDWEE00503
+WESTERN DIGITAL Red Plus 4TB Hard Drive
+1
+$174.99
+$174.99
+WXC2DC5NATSC
+Remark:
+Web Order Id: 1111111
+Returns and exchanges: Please visithttps://www.canadacomputers.com/
+en/returnandexchangepolicies for full return and exchange details.
+Warranty & Extended Tech Care Plan- Please visit:
+https://www.canadacomputers.com/en/content/13/product-warranty
+Shipping:
+$8.10
+Sub-Total:
+$183.09
+H.S.T:
+$23.80
+Total:
+$206.89 CAD
