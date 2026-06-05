@@ -40,12 +40,12 @@ This set of Python scripts automates the entry of receipt transactions and image
 2. Install python 3.xx to your machine
 3. Install the [python VSCode extension](https://code.visualstudio.com/docs/configure/extensions/extension-marketplace)
 4. Open VSCode, Create a virtual python environment
-    a. Open VSCode Command Pallette (Ctrl-Shift-P)
-    b. Type Python Create Environment
-    c. Select Venv
-    d. Select your python.exe install location
-    e. Check the dependencies box, make sure it points to ReceiptEntry\requirements.txt, hit OK
-    f. In the terminal, type 'playwright install' and hit enter
+    1. Open VSCode Command Pallette (Ctrl-Shift-P)
+    2. Type Python Create Environment
+    3. Select Venv
+    4. Select your python.exe install location
+    5. Check the dependencies box, make sure it points to ReceiptEntry\requirements.txt, hit OK
+    6. In the terminal, type 'playwright install' and hit enter
 5. Create a secrets.txt containing your Wave credentials (see Configuation for format or to change filename), store in ReceiptEntry folder
 6. Run ExtractID.py to get your Wave account IDs
 7. Set script config values (see below)
